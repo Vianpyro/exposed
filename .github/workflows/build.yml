@@ -1,0 +1,69 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Get version from Cargo.toml
+        id: version
+        run: echo "version=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git ls-remote --tags origin "v${{ steps.version.outputs.version }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run two-pass build
+        if: steps.tag_check.outputs.exists == 'false'
+        run: ./build.sh
+
+      - name: Bundle binary with runtime libraries
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          mkdir -p dist
+          cp target/release/exposed dist/
+
+          # Copy the Rust stdlib .so files needed by prefer-dynamic
+          RUSTLIB=$(rustc --print sysroot)/lib/rustlib/x86_64-unknown-linux-gnu/lib
+          for lib in "$RUSTLIB"/libstd-*.so "$RUSTLIB"/libgcc_s.so*; do
+            [ -f "$lib" ] && cp "$lib" dist/
+          done
+
+          # Create a launcher script so users don't have to set LD_LIBRARY_PATH
+          printf '#!/usr/bin/env bash\nDIR="$(cd "$(dirname "$0")" && pwd)"\nLD_LIBRARY_PATH="$DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" exec "$DIR/exposed" "$@"\n' > dist/run.sh
+          chmod +x dist/run.sh
+
+          tar czf exposed-linux-x86_64.tar.gz -C dist .
+
+      - name: Upload build artifact
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exposed-linux-x86_64
+          path: exposed-linux-x86_64.tar.gz
+
+      - name: Create tag and release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          files: exposed-linux-x86_64.tar.gz
+          generate_release_notes: true
