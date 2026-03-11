@@ -97,8 +97,9 @@ cargo build --release 2>&1
 # Sanity check
 echo ""
 echo "=== verification ==="
+RUSTLIB=$(rustc --print sysroot)/lib/rustlib/x86_64-unknown-linux-gnu/lib
 RESULT=$(printf 'FLAG{b4s3_1s_n0t_3ncrypt10n}\nFLAG{x0r_w1th_r0t4t10n_1s_b3tt3r}\nFLAG{wh3n_r0_m33ts_v-tabl3s}\n' \
-    | "$BINARY" 2>&1)
+    | LD_LIBRARY_PATH="$RUSTLIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$BINARY" 2>&1)
 
 if echo "$RESULT" | grep -q "You found all three"; then
     echo "all three flags validated."
