@@ -93,7 +93,7 @@ Now look at the disassembly of the flag 2 checker:
 objdump -d -M intel ./exposed | less
 ```
 
-The relevant logic sits around `0x202f42`. Two instructions give it away immediately:
+The relevant logic sits around `0x202f6d`. Two instructions give it away immediately:
 
 ```asm
 80 f2 5a    xor   dl, 0x5a

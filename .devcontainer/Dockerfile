@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     binutils \
     file \
     xxd \
+    less \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup default user
