@@ -167,19 +167,16 @@ unsafe fn read_line(buf: &mut [u8; 128]) {
 }
 
 unsafe fn prompt_flag(n: c_int, label: *const c_char, checker: unsafe fn(&[u8; 128]) -> bool) {
-    loop {
-        printf(cstr!("> FLAG %d  -  %s: "), n, label);
-        fflush(stdout);
+    printf(cstr!("> FLAG %d  -  %s: "), n, label);
+    fflush(stdout);
 
-        let mut buf = [0u8; 128];
-        read_line(&mut buf);
+    let mut buf = [0u8; 128];
+    read_line(&mut buf);
 
-        if checker(&buf) {
-            printf(cstr!("  [+] Correct! Flag %d validated.\n\n"), n);
-            break;
-        } else {
-            printf(cstr!("  [-] Wrong. Try again.\n\n"));
-        }
+    if checker(&buf) {
+        printf(cstr!("  [+] Correct! Flag %d validated.\n\n"), n);
+    } else {
+        printf(cstr!("  [-] Wrong.\n\n"));
     }
 }
 
